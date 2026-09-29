@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_LoanApplication" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.49.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:process id="Process_LoanApplication" name="Loan Application Processing" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Customer submits loan application">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_VerifyDocuments" name="Verify documents and credit score">
+      <bpmn:extensionElements><zeebe:taskDefinition type="verify-documents-credit" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_DocsValid" name="Documents valid?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Docs_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Docs_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_CheckEligibility" name="Check eligibility (credit score + income)">
+      <bpmn:extensionElements><zeebe:taskDefinition type="check-eligibility" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Docs_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Eligible" name="Eligible?">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_Elig_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Elig_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_OfficerApproval" name="Loan officer final approval">
+      <bpmn:extensionElements><zeebe:userTask /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Elig_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_OfficerApproves" name="Officer approves?">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_Off_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Off_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_DisburseLoan" name="Disburse loan and send approval notification">
+      <bpmn:extensionElements><zeebe:taskDefinition type="disburse-loan" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Off_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Approved" name="Loan approved and disbursed">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="Task_RejectInvalidDocs" name="Reject application and notify customer">
+      <bpmn:extensionElements><zeebe:taskDefinition type="reject-invalid-documents" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Docs_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_InvalidDocs" name="Invalid documents">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Task_OfficerRejectNotify" name="Loan officer sends rejection notification">
+      <bpmn:extensionElements><zeebe:userTask /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Elig_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_NotEligible" name="Not eligible">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="Task_SendOfficerRejection" name="Send rejection notification">
+      <bpmn:extensionElements><zeebe:taskDefinition type="send-officer-rejection" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Off_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_OfficerRejected" name="Officer rejected">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_VerifyDocuments" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_VerifyDocuments" targetRef="Gateway_DocsValid" />
+    <bpmn:sequenceFlow id="Flow_Docs_Yes" name="Yes" sourceRef="Gateway_DocsValid" targetRef="Task_CheckEligibility" />
+    <bpmn:sequenceFlow id="Flow_Docs_No" name="No" sourceRef="Gateway_DocsValid" targetRef="Task_RejectInvalidDocs" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_CheckEligibility" targetRef="Gateway_Eligible" />
+    <bpmn:sequenceFlow id="Flow_Elig_Yes" name="Yes" sourceRef="Gateway_Eligible" targetRef="Task_OfficerApproval" />
+    <bpmn:sequenceFlow id="Flow_Elig_No" name="No" sourceRef="Gateway_Eligible" targetRef="Task_OfficerRejectNotify" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_OfficerApproval" targetRef="Gateway_OfficerApproves" />
+    <bpmn:sequenceFlow id="Flow_Off_Yes" name="Yes" sourceRef="Gateway_OfficerApproves" targetRef="Task_DisburseLoan" />
+    <bpmn:sequenceFlow id="Flow_Off_No" name="No" sourceRef="Gateway_OfficerApproves" targetRef="Task_SendOfficerRejection" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_DisburseLoan" targetRef="End_Approved" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_RejectInvalidDocs" targetRef="End_InvalidDocs" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_OfficerRejectNotify" targetRef="End_NotEligible" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_SendOfficerRejection" targetRef="End_OfficerRejected" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_LoanApplication">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1"><dc:Bounds x="152" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="130" y="225" width="80" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_VerifyDocuments_di" bpmnElement="Task_VerifyDocuments"><dc:Bounds x="240" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_DocsValid_di" bpmnElement="Gateway_DocsValid" isMarkerVisible="true"><dc:Bounds x="395" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="376" y="145" width="88" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CheckEligibility_di" bpmnElement="Task_CheckEligibility"><dc:Bounds x="500" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Eligible_di" bpmnElement="Gateway_Eligible" isMarkerVisible="true"><dc:Bounds x="655" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="662" y="145" width="36" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_OfficerApproval_di" bpmnElement="Task_OfficerApproval"><dc:Bounds x="760" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_OfficerApproves_di" bpmnElement="Gateway_OfficerApproves" isMarkerVisible="true"><dc:Bounds x="915" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="898" y="145" width="84" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DisburseLoan_di" bpmnElement="Task_DisburseLoan"><dc:Bounds x="1020" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Approved_di" bpmnElement="End_Approved"><dc:Bounds x="1172" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1150" y="225" width="80" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RejectInvalidDocs_di" bpmnElement="Task_RejectInvalidDocs"><dc:Bounds x="370" y="300" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_InvalidDocs_di" bpmnElement="End_InvalidDocs"><dc:Bounds x="402" y="432" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="382" y="475" width="76" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_OfficerRejectNotify_di" bpmnElement="Task_OfficerRejectNotify"><dc:Bounds x="630" y="300" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_NotEligible_di" bpmnElement="End_NotEligible"><dc:Bounds x="662" y="432" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="650" y="475" width="60" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendOfficerRejection_di" bpmnElement="Task_SendOfficerRejection"><dc:Bounds x="890" y="300" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_OfficerRejected_di" bpmnElement="End_OfficerRejected"><dc:Bounds x="922" y="432" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="906" y="475" width="68" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="188" y="200" /><di:waypoint x="240" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="340" y="200" /><di:waypoint x="395" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Docs_Yes_di" bpmnElement="Flow_Docs_Yes"><di:waypoint x="445" y="200" /><di:waypoint x="500" y="200" />
+        <bpmndi:BPMNLabel><dc:Bounds x="463" y="182" width="18" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Docs_No_di" bpmnElement="Flow_Docs_No"><di:waypoint x="420" y="225" /><di:waypoint x="420" y="300" />
+        <bpmndi:BPMNLabel><dc:Bounds x="428" y="255" width="15" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="600" y="200" /><di:waypoint x="655" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Elig_Yes_di" bpmnElement="Flow_Elig_Yes"><di:waypoint x="705" y="200" /><di:waypoint x="760" y="200" />
+        <bpmndi:BPMNLabel><dc:Bounds x="723" y="182" width="18" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Elig_No_di" bpmnElement="Flow_Elig_No"><di:waypoint x="680" y="225" /><di:waypoint x="680" y="300" />
+        <bpmndi:BPMNLabel><dc:Bounds x="688" y="255" width="15" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="860" y="200" /><di:waypoint x="915" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Off_Yes_di" bpmnElement="Flow_Off_Yes"><di:waypoint x="965" y="200" /><di:waypoint x="1020" y="200" />
+        <bpmndi:BPMNLabel><dc:Bounds x="983" y="182" width="18" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Off_No_di" bpmnElement="Flow_Off_No"><di:waypoint x="940" y="225" /><di:waypoint x="940" y="300" />
+        <bpmndi:BPMNLabel><dc:Bounds x="948" y="255" width="15" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="1120" y="200" /><di:waypoint x="1172" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="420" y="380" /><di:waypoint x="420" y="432" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="680" y="380" /><di:waypoint x="680" y="432" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8"><di:waypoint x="940" y="380" /><di:waypoint x="940" y="432" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

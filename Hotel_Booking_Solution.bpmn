@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_HotelBooking" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.49.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:process id="Process_HotelBooking" name="Hotel Room Booking" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Guest submits booking request (check-in / check-out dates)">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_CheckAvailability" name="Check room availability">
+      <bpmn:extensionElements><zeebe:taskDefinition type="check-availability" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Available" name="Rooms available?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Avail_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Avail_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_RequestPayment" name="Request payment / deposit">
+      <bpmn:extensionElements><zeebe:taskDefinition type="request-payment" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Avail_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Payment" name="Payment successful?">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_Pay_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Pay_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_ConfirmBooking" name="Confirm booking and generate reference number">
+      <bpmn:extensionElements><zeebe:taskDefinition type="confirm-booking" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Pay_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="Task_SendConfirmation" name="Send booking confirmation email">
+      <bpmn:extensionElements><zeebe:taskDefinition type="send-confirmation-email" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Confirmed" name="Booking confirmed">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="Task_NotifyNoRooms" name="Notify guest: no rooms available">
+      <bpmn:extensionElements><zeebe:taskDefinition type="notify-no-rooms" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Avail_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_NoRooms" name="No rooms available">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="Task_NotifyPaymentFailure" name="Notify guest: payment failed">
+      <bpmn:extensionElements><zeebe:taskDefinition type="notify-payment-failure" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Pay_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_PaymentFailed" name="Payment failed">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_CheckAvailability" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_CheckAvailability" targetRef="Gateway_Available" />
+    <bpmn:sequenceFlow id="Flow_Avail_Yes" name="Yes" sourceRef="Gateway_Available" targetRef="Task_RequestPayment" />
+    <bpmn:sequenceFlow id="Flow_Avail_No" name="No" sourceRef="Gateway_Available" targetRef="Task_NotifyNoRooms" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_RequestPayment" targetRef="Gateway_Payment" />
+    <bpmn:sequenceFlow id="Flow_Pay_Yes" name="Yes" sourceRef="Gateway_Payment" targetRef="Task_ConfirmBooking" />
+    <bpmn:sequenceFlow id="Flow_Pay_No" name="No" sourceRef="Gateway_Payment" targetRef="Task_NotifyPaymentFailure" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_ConfirmBooking" targetRef="Task_SendConfirmation" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_SendConfirmation" targetRef="End_Confirmed" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_NotifyNoRooms" targetRef="End_NoRooms" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_NotifyPaymentFailure" targetRef="End_PaymentFailed" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_HotelBooking">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="130" y="225" width="80" height="53" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CheckAvailability_di" bpmnElement="Task_CheckAvailability">
+        <dc:Bounds x="240" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Available_di" bpmnElement="Gateway_Available" isMarkerVisible="true">
+        <dc:Bounds x="395" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="376" y="145" width="88" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RequestPayment_di" bpmnElement="Task_RequestPayment">
+        <dc:Bounds x="500" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Payment_di" bpmnElement="Gateway_Payment" isMarkerVisible="true">
+        <dc:Bounds x="655" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="642" y="145" width="76" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ConfirmBooking_di" bpmnElement="Task_ConfirmBooking">
+        <dc:Bounds x="760" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendConfirmation_di" bpmnElement="Task_SendConfirmation">
+        <dc:Bounds x="910" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Confirmed_di" bpmnElement="End_Confirmed">
+        <dc:Bounds x="1062" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1042" y="225" width="76" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifyNoRooms_di" bpmnElement="Task_NotifyNoRooms">
+        <dc:Bounds x="370" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_NoRooms_di" bpmnElement="End_NoRooms">
+        <dc:Bounds x="402" y="432" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="382" y="475" width="76" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifyPaymentFailure_di" bpmnElement="Task_NotifyPaymentFailure">
+        <dc:Bounds x="630" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_PaymentFailed_di" bpmnElement="End_PaymentFailed">
+        <dc:Bounds x="662" y="432" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="645" y="475" width="70" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="188" y="200" /><di:waypoint x="240" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="340" y="200" /><di:waypoint x="395" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Avail_Yes_di" bpmnElement="Flow_Avail_Yes"><di:waypoint x="445" y="200" /><di:waypoint x="500" y="200" />
+        <bpmndi:BPMNLabel><dc:Bounds x="463" y="182" width="18" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Avail_No_di" bpmnElement="Flow_Avail_No"><di:waypoint x="420" y="225" /><di:waypoint x="420" y="300" />
+        <bpmndi:BPMNLabel><dc:Bounds x="428" y="255" width="15" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="600" y="200" /><di:waypoint x="655" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Pay_Yes_di" bpmnElement="Flow_Pay_Yes"><di:waypoint x="705" y="200" /><di:waypoint x="760" y="200" />
+        <bpmndi:BPMNLabel><dc:Bounds x="723" y="182" width="18" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Pay_No_di" bpmnElement="Flow_Pay_No"><di:waypoint x="680" y="225" /><di:waypoint x="680" y="300" />
+        <bpmndi:BPMNLabel><dc:Bounds x="688" y="255" width="15" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="860" y="200" /><di:waypoint x="910" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="1010" y="200" /><di:waypoint x="1062" y="200" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="420" y="380" /><di:waypoint x="420" y="432" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="680" y="380" /><di:waypoint x="680" y="432" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
